@@ -32,8 +32,8 @@ double world_y_max;
 
 //parameters we should adjust : K, margin, MaxStep
 int margin = 8;
-int K = 19990;
-double MaxStep = 0.75;
+int K = 10000;
+double MaxStep = 1.2;
 
 //way points
 std::vector<point> waypoints;
@@ -97,7 +97,7 @@ int main(int argc, char** argv){
     set_waypoints();
     printf("Set way points\n");
 
-//    set_angle();
+    set_angle();
 //    printf("set_angle called \n");
     // RRT
     generate_path_RRT();
@@ -299,7 +299,7 @@ void generate_path_RRT()
     for (int i = 0; i < waypoints.size()-1; i++)
     {
         rrtTree subtree;
-	std::cout <<"from: "<<waypoints[i].x <<" "<<waypoints[i].y << " " << waypoints[i].th << "   to: "<<waypoints[i+1].x <<" "<<waypoints[i+1].y<<" "<< waypoints[i+1].th << std::endl; // for debug
+//	std::cout <<"from: "<<waypoints[i].x <<" "<<waypoints[i].y << " " << waypoints[i].th << "   to: "<<waypoints[i+1].x <<" "<<waypoints[i+1].y<<" "<< waypoints[i+1].th << std::endl; // for debug
 	subtree = rrtTree(waypoints[i], waypoints[i + 1], map, map_origin_x, map_origin_y, res, margin);
 	
         int k = subtree.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);  // check RRT
@@ -319,24 +319,28 @@ void generate_path_RRT()
 	    std::cout << (i+1) << "th generateRRT is fine" << std::endl; // for debug
             std::vector<traj> route_reverse = subtree.backtracking_traj();
 
-            std::cout <<"subtre size: "<<route_reverse.size()<<std::endl;    // for debug
+            //std::cout <<"subtre size: "<<route_reverse.size()<<std::endl;    // for debug
             std::reverse(route_reverse.begin(), route_reverse.end());
 
 	    path_temp.push_back(route_reverse);	// save subTree's path
 	    // set heading direction
 	    waypoints[i+1].th = atan2(path_temp[i][path_temp[i].size()-1].y - path_temp[i][path_temp[i].size()-2].y, path_temp[i][path_temp[i].size()-1].x - path_temp[i][path_temp[i].size()-2].x);
-	    std::cout << waypoints[i+1].th << std::endl;    // for debug
-            std::cout<<std::endl;	// for debug
+	    //std::cout << waypoints[i+1].th << std::endl;    // for debug
+            //std::cout<<std::endl;	// for debug
     	}
     }
+	std::cout << "start printing" << std::endl;
+
     for (int i = 0 ; i < waypoints.size() - 1; i++)
     {
-	std::cout << "start printing" << std::endl;
-        for (int j = 0; j < path_temp[i].size(); j++)
+        for (int
+ j = 0; j < path_temp[i].size(); j++)
 	    path_RRT.push_back(path_temp[i][j]);
         std::cout << path_RRT.size() << std::endl; // for debug
     }
 }
+
+
 
 void set_waypoints()
 {
@@ -365,13 +369,16 @@ void set_waypoints()
         waypoints.push_back(waypoint_candid[order[i]]);
     }
 }
+
 void set_angle()
 {
-    for (int i =0; i<waypoints.size()-1; i++)
+    int i = 1;
+    for (int i =1; i<waypoints.size()-1; i++)
     {
-        waypoints[i+1].th = atan2(waypoints[i+1].y - waypoints[i].y, waypoints[i+1].x - waypoints[i].x);
-std::cout << waypoints[i+1].th << std::endl;
+        waypoints[i].th = atan2(waypoints[i+1].y - waypoints[i-1].y, waypoints[i+1].x - waypoints[i-1].x);
+//std::cout << waypoints[i+1].th << std::endl;
     }
+    waypoints[i].th = atan2(waypoints[i].y - waypoints[i-1].y , waypoints[i].x - waypoints[i-1].x);
 }
 
 //from: 3.5 -10.5 -1.57   to: -2 -12 3.14

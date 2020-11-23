@@ -205,16 +205,16 @@ void rrtTree::addVertex(point x_new, point x_rand, int idx_near, double alpha, d
 int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min, int K, double MaxStep)
 {
     //TODO
-    //std::cout <<"count is : "<<count<<std::endl;
+    //std::cout <<"count is : "<<count<<std::endl; // for debug
     int succeed = 0;
     int i =0;
-    //std::cout <<"gen started "<<i<<std::endl;
+    //std::cout <<"gen started "<<i<<std::endl; // for debug
     for (i = 0; i < K; i++)
     {
         //goal
         if (pow(x_goal.x - ptrTable[count - 1]->location.x, 2) + pow(x_goal.y - ptrTable[count - 1]->location.y, 2) <= 0.04)
         {
-            //std::cout <<"path found"<<std::endl;
+            //std::cout <<"path found"<<std::endl; // for debug
             succeed = 1;
             break;
         }
@@ -224,43 +224,40 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
         x_near_index = nearestNeighbor(x_rand, MaxStep);  // nearest neighbor search
         if (x_near_index == -1)
         {
-//            i--;
             continue;
         }
-//cout << "near found" << endl;
-//if this point can't make randompath more than 20, do not use
-while(ptrTable[x_near_index]->backstep_count > 20)
-{
-    if(x_near_index == 0)
-        break;
-    x_near_index = ptrTable[x_near_index]->idx_parent;
-}
+        //cout << "near found" << endl;  // for debug
+        //if this point can't make randompath more than 20, do not use
+        while(ptrTable[x_near_index]->backstep_count > 20)
+        {
+            if(x_near_index == 0)
+                break;
+            x_near_index = ptrTable[x_near_index]->idx_parent;
+        }
 
         double out[5];
         int valid = 0;
         valid = randompath(out, ptrTable[x_near_index]->location, x_rand, MaxStep); //random path generation
         if (valid == 0)
         {
-//            i--;
-        ptrTable[x_near_index]->backstep_count ++;
+            ptrTable[x_near_index]->backstep_count ++;
             continue;
         }
-//cout << "find RP" << endl;
+        //cout << "find RP" << endl;  // for debug
         point x_new;
         x_new.x = out[0];
         x_new.y = out[1];
         x_new.th = out[2];
-//cout << "is it here? " << count << endl;
+        //cout << "is it here? " << count << endl;  // for debug
         addVertex(x_new, x_rand, x_near_index, out[3], out[4]);
-//cout << (i+1) << "th add success" << endl;
+        //cout << (i+1) << "th add success" << endl;  // for debug
     }
-    //std::cout <<"loop is over "<< i<<std::endl;
-    //std::cout <<"goal: "<<x_goal.x<<" "<<x_goal.y<<" "<<x_goal.th<<std::endl;
+    //std::cout <<"loop is over "<< i<<std::endl;  // for debug
+    //std::cout <<"goal: "<<x_goal.x<<" "<<x_goal.y<<" "<<x_goal.th<<std::endl;  // for debug
     int ccc =nearestNeighbor(x_goal, 999);
-//std::cout <<"nearestNeighbor: "<<ccc<<std::endl;
-    
-    //std::cout << ptrTable[ccc]->location.x <<" "<<ptrTable[ccc]->location.y<<std::endl;
-//        cout << "loop is finished might be failed" << endl; //- for debug
+    //std::cout <<"nearestNeighbor: "<<ccc<<std::endl;  // for debug
+    //std::cout << ptrTable[ccc]->location.x <<" "<<ptrTable[ccc]->location.y<<std::endl;  // for debug
+    //cout << "loop is finished might be failed" << endl; //- for debug
     return succeed;
 }
 
@@ -268,8 +265,8 @@ point rrtTree::randomState(double x_max, double x_min, double y_max, double y_mi
 {
     //TODO
     point random;
-//    if (count % 20 == 0) // goal biased
-//        return x_goal;
+    if (count % 20 == 0) // goal biased
+        return x_goal;
 
     random.x = (double)rand() / (RAND_MAX) * (x_max - x_min) + x_min;
     random.y = (double)rand() / (RAND_MAX) * (y_max - y_min) + y_min;
@@ -289,45 +286,29 @@ int rrtTree::nearestNeighbor(point x_rand, double MaxStep)
         double temp = sqrt(pow(ptrTable[i]->location.x - x_rand.x, 2) + pow(ptrTable[i]->location.y - x_rand.y, 2)); //distance
         if (temp < nd)                                                                                         //to reduce calculation
         {
-/*            //checking 2 direction (left & right)
-            double x_left_center = ptrTable[i]->location.x - maxR * sin(ptrTable[i]->location.th);
-            double y_left_center = ptrTable[i]->location.y + maxR * cos(ptrTable[i]->location.th);
-            double x_right_center = ptrTable[i]->location.x + maxR * sin(ptrTable[i]->location.th);
-            double y_right_center = ptrTable[i]->location.y - maxR * cos(ptrTable[i]->location.th);
-            double temp_left = pow(x_left_center - x_rand.x, 2) + pow(y_left_center - x_rand.y, 2);
-            double temp_right = pow(x_right_center - x_rand.x, 2) + pow(y_right_center - x_rand.y, 2);
-            if (temp_left > pow(maxR, 2) && temp_right > pow(maxR, 2)) //if it's accessible
-            {
-                nd = temp;
-                nN = i;
-                //cout<<"nearest neighbor reachable! "<< nN<<endl; - for debug
-            }*/
-
-  	    double theta;
-	    if (x_rand.y - ptrTable[i]->location.y > 0)
-	        theta = acos((x_rand.x-ptrTable[i]->location.x)/(sqrt(pow(x_rand.x - ptrTable[i]->location.x,2.0) + pow(x_rand.y - ptrTable[i]->location.y,2.0))));
-	    else if (x_rand.y - ptrTable[i]->location.y < 0)
-		theta = 2*PI - acos((x_rand.x-ptrTable[i]->location.x)/(sqrt(pow(x_rand.x - ptrTable[i]->location.x,2.0) + pow(x_rand.y - ptrTable[i]->location.y,2.0))));
-	    else
-	    {
-		if(x_rand.x - ptrTable[i]->location.x > 0)
+  	        double theta;
+	        if (x_rand.y - ptrTable[i]->location.y > 0)
+	            theta = acos((x_rand.x-ptrTable[i]->location.x)/(sqrt(pow(x_rand.x - ptrTable[i]->location.x,2.0) + pow(x_rand.y - ptrTable[i]->location.y,2.0))));
+	        else if (x_rand.y - ptrTable[i]->location.y < 0)
+		        theta = 2*PI - acos((x_rand.x-ptrTable[i]->location.x)/(sqrt(pow(x_rand.x - ptrTable[i]->location.x,2.0) + pow(x_rand.y - ptrTable[i]->location.y,2.0))));
+	        else
+	        {
+		        if(x_rand.x - ptrTable[i]->location.x > 0)
 	    	    theta = 0.0;
-		else
+		        else
 	            theta = PI;
     	    }
-	    double error = theta - ptrTable[i]->location.th;
-	    if (error > PI) error = error - 2.0 * PI;
+	        double error = theta - ptrTable[i]->location.th;
+	        if (error > PI) error = error - 2.0 * PI;
     	    else if (error < (-1.0) * PI) error = error + 2.0 * PI;
-	    if (error <= beta && error >= -beta)
-	    {
-		nd = temp;
-		nN = i;
-	    }
-
-
+	        if (error <= beta && error >= -beta)
+	        {
+		        nd = temp;
+		        nN = i;
+	        }
         }
     }
-    //cout<<"nN "<<nN<<" "; - for debug
+    //cout<<"nN "<<nN<<" ";  // for debug
     return nN;
 }
 int rrtTree::nearestNeighbor(point x_rand)

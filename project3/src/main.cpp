@@ -97,20 +97,20 @@ int main(int argc, char** argv){
     set_waypoints();
     printf("Set way points\n");
 
+    // set angle - user defined
     set_angle();
-//    printf("set_angle called \n");
+
     // RRT
     generate_path_RRT();
     printf("Generate RRT\n");
-printf("path size : %d\n", path_RRT.size());
 
     // FSM
     state = INIT;
-//    state = FINISH;
     bool running = true;
     int look_ahead_idx;
     ros::Rate control_rate(60);
-// define
+
+    // define variables
     int rrt_next = 1;
     PID pid_ctrl;
     double max_turn = 0.6;
@@ -245,18 +245,17 @@ printf("path size : %d\n", path_RRT.size());
 		while (ros::ok())
                 {
                     //current point setting
-		    //std::cout << rrt_next << " 2 ";
-		
+		            //std::cout << rrt_next << " 2 ";  // for debug
                     point next_point;
                     next_point.x = path_RRT[rrt_next].x;
                     next_point.y = path_RRT[rrt_next].y;
                     next_point.th = path_RRT[rrt_next].th;
                     //ctrl control from robot_position to next_point
                     float control = pid_ctrl.get_control(robot_pose, next_point);
-		    float angle = 0;
-		    angle += control;
-		    if (angle > max_turn) angle = max_turn;
-		    if (angle < -max_turn) angle = -max_turn;
+	                float angle = 0;
+		            angle += control;
+		            if (angle > max_turn) angle = max_turn;
+		            if (angle < -max_turn) angle = -max_turn;
                     setcmdvel(1, angle);
                     cmd_vel_pub.publish(cmd);
                     //use robot_pose
@@ -272,8 +271,8 @@ printf("path size : %d\n", path_RRT.size());
                     }
 		    ros::spinOnce();
 	            control_rate.sleep();
-//	            printf("robot pose : %.2f,%.2f,%.2f \n", robot_pose.x, robot_pose.y, robot_pose.th);
-//		    std::cout << " " << rrt_next << std::endl;
+                //printf("robot pose : %.2f,%.2f,%.2f \n", robot_pose.x, robot_pose.y, robot_pose.th);  // for debug
+                //std::cout << " " << rrt_next << std::endl;  // for debug
                 }
             } break;
 
@@ -299,29 +298,26 @@ void generate_path_RRT()
     for (int i = 0; i < waypoints.size()-1; i++)
     {
         rrtTree subtree;
-//	std::cout <<"from: "<<waypoints[i].x <<" "<<waypoints[i].y << " " << waypoints[i].th << "   to: "<<waypoints[i+1].x <<" "<<waypoints[i+1].y<<" "<< waypoints[i+1].th << std::endl; // for debug
-	subtree = rrtTree(waypoints[i], waypoints[i + 1], map, map_origin_x, map_origin_y, res, margin);
-	
+    //	std::cout <<"from: "<<waypoints[i].x <<" "<<waypoints[i].y << " " << waypoints[i].th << "   to: "<<waypoints[i+1].x <<" "<<waypoints[i+1].y<<" "<< waypoints[i+1].th << std::endl; // for debug
+        subtree = rrtTree(waypoints[i], waypoints[i + 1], map, map_origin_x, map_origin_y, res, margin);
         int k = subtree.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);  // check RRT
 	if(!k)	// RRT is not OK => delete previous RRT, and make it one more time
 	{
 	    if (i == 0)	// exception control
-		i -= 1;
+	     i -= 1;
 	    else
-		{
-		path_temp.pop_back();	// delete previous RRT
-		i -= 2;
-		}
+	    {
+	        path_temp.pop_back();	// delete previous RRT
+	        i -= 2;
+	    }
 	    continue;
 	}
 	if(k)	// RRT is OK
 	{
-	    std::cout << (i+1) << "th generateRRT is fine" << std::endl; // for debug
+	    //std::cout << (i+1) << "th generateRRT is fine" << std::endl; // for debug
             std::vector<traj> route_reverse = subtree.backtracking_traj();
-
             //std::cout <<"subtre size: "<<route_reverse.size()<<std::endl;    // for debug
             std::reverse(route_reverse.begin(), route_reverse.end());
-
 	    path_temp.push_back(route_reverse);	// save subTree's path
 	    // set heading direction
 	    waypoints[i+1].th = atan2(path_temp[i][path_temp[i].size()-1].y - path_temp[i][path_temp[i].size()-2].y, path_temp[i][path_temp[i].size()-1].x - path_temp[i][path_temp[i].size()-2].x);
@@ -329,14 +325,13 @@ void generate_path_RRT()
             //std::cout<<std::endl;	// for debug
     	}
     }
-	std::cout << "start printing" << std::endl;
+    //std::cout << "start printing" << std::endl;  // for debug
 
     for (int i = 0 ; i < waypoints.size() - 1; i++)
     {
-        for (int
- j = 0; j < path_temp[i].size(); j++)
+        for (int j = 0; j < path_temp[i].size(); j++)
 	    path_RRT.push_back(path_temp[i][j]);
-        std::cout << path_RRT.size() << std::endl; // for debug
+        //std::cout << path_RRT.size() << std::endl; // for debug
     }
 }
 
@@ -353,11 +348,9 @@ void set_waypoints()
     
     waypoint_candid[2].x = 3.5;
     waypoint_candid[2].y = -10.5;
-//    waypoint_candid[2].th = - 3.14/2;
 
     waypoint_candid[3].x = -2.0;
     waypoint_candid[3].y = -12.0;
-//        waypoint_candid[3].th = 3.14;
 
     waypoint_candid[4].x = -3.5;
     waypoint_candid[4].y = 10.0;
@@ -376,12 +369,10 @@ void set_angle()
     for (int i =1; i<waypoints.size()-1; i++)
     {
         waypoints[i].th = atan2(waypoints[i+1].y - waypoints[i-1].y, waypoints[i+1].x - waypoints[i-1].x);
-//std::cout << waypoints[i+1].th << std::endl;
+    //std::cout << waypoints[i+1].th << std::endl;  // for debug
     }
     waypoints[i].th = atan2(waypoints[i].y - waypoints[i-1].y , waypoints[i].x - waypoints[i-1].x);
 }
-
-//from: 3.5 -10.5 -1.57   to: -2 -12 3.14
 
 void callback_state(gazebo_msgs::ModelStatesConstPtr msgs){
     model_states = msgs;

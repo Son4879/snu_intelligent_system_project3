@@ -351,7 +351,7 @@ int rrtTree::randompath(double *out, point x_near, point x_rand, double MaxStep)
 {
     //TODO
     // create some random paths starting from x_near
-    int howmany = 30;
+    int howmany = 20;
     double *alpha = new double[howmany];
     double *d = new double[howmany];
     double *R = new double[howmany];
@@ -368,13 +368,13 @@ int rrtTree::randompath(double *out, point x_near, point x_rand, double MaxStep)
     {
         alpha[i] = (((double)rand() / RAND_MAX) * 2 - 1) * max_alpha;
         R[i] = L / tan(alpha[i]);
-        d[i] = (double)rand() / RAND_MAX * MaxStep;
+        d[i] = (((double)rand() / RAND_MAX)*0.6 +0.3)* MaxStep;
         double beta = d[i] / R[i];
         x_center = x_near.x - R[i] * sin(x_near.th);
         y_center = x_near.y + R[i] * cos(x_near.th);
         x_where[i] = x_center + R[i] * sin(x_near.th + beta);
         y_where[i] = y_center - R[i] * cos(x_near.th + beta);
-        theta[i] = x_near.th + d[i] / R[i];
+        theta[i] = x_near.th + beta;
         p[i].x = x_where[i];
         p[i].y = y_where[i];
         p[i].th = theta[i];
@@ -391,7 +391,16 @@ int rrtTree::randompath(double *out, point x_near, point x_rand, double MaxStep)
         }
     }
     if (best == -1)
+    {
+        delete[] alpha;
+        delete[] d;
+        delete[] R;
+        delete[] x_where;
+        delete[] y_where;
+        delete[] theta;
+        delete[] p;
         return 0;
+    }
     out[0] = x_where[best]; //x
     out[1] = y_where[best]; //y
     out[2] = theta[best];   //theta

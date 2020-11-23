@@ -32,8 +32,8 @@ double world_y_max;
 
 //parameters we should adjust : K, margin, MaxStep
 int margin = 8;
-int K = 10000;
-double MaxStep = 1;
+int K = 19990;
+double MaxStep = 0.75;
 
 //way points
 std::vector<point> waypoints;
@@ -53,6 +53,7 @@ int state;
 
 //function definition
 void set_waypoints();
+void set_angle();
 void generate_path_RRT();
 void callback_state(gazebo_msgs::ModelStatesConstPtr msgs);
 void setcmdvel(double v, double w);
@@ -96,12 +97,16 @@ int main(int argc, char** argv){
     set_waypoints();
     printf("Set way points\n");
 
+//    set_angle();
+//    printf("set_angle called \n");
     // RRT
     generate_path_RRT();
     printf("Generate RRT\n");
+printf("path size : %d\n", path_RRT.size());
 
     // FSM
     state = INIT;
+//    state = FINISH;
     bool running = true;
     int look_ahead_idx;
     ros::Rate control_rate(60);
@@ -256,7 +261,10 @@ int main(int argc, char** argv){
                     cmd_vel_pub.publish(cmd);
                     //use robot_pose
                     if (pow(next_point.x - robot_pose.x, 2) + pow(next_point.y - robot_pose.y, 2) <= 0.04) //when reached next path_RRT
+                    {
+                        printf("robot pose : %.2f,%.2f,%.2f \n", robot_pose.x, robot_pose.y, robot_pose.th);
                         rrt_next++;
+                    }
                     if (rrt_next == path_RRT.size()) //when arrived
                     {
                         state = FINISH;
@@ -264,8 +272,8 @@ int main(int argc, char** argv){
                     }
 		    ros::spinOnce();
 	            control_rate.sleep();
-	            printf("robot pose : %.2f,%.2f,%.2f \n", robot_pose.x, robot_pose.y, robot_pose.th);
-		    std::cout << " " << rrt_next << std::endl;
+//	            printf("robot pose : %.2f,%.2f,%.2f \n", robot_pose.x, robot_pose.y, robot_pose.th);
+//		    std::cout << " " << rrt_next << std::endl;
                 }
             } break;
 
@@ -287,27 +295,46 @@ int main(int argc, char** argv){
 void generate_path_RRT()
 {
     //TODO
-    rrtTree subtree;
+    std::vector< std::vector<traj> > path_temp;    // save path of subTree
     for (int i = 0; i < waypoints.size()-1; i++)
     {
-//std::cout << "start" << std::endl;
-	subtree = rrtTree(waypoints[i], waypoints[i + 1], map, map_origin_x, map_origin_y, res, margin);	
-//        rrtTree subTree(waypoints[i], waypoints[i + 1], map, map_origin_x, map_origin_y, res, margin);
-//std::cout << "subTree is fine" << std::endl;
-        subtree.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);
-std::cout << (i+1) << "th generateRRT is fine" << std::endl;
-//        subtree.visualizeTree();
+        rrtTree subtree;
+	std::cout <<"from: "<<waypoints[i].x <<" "<<waypoints[i].y << " " << waypoints[i].th << "   to: "<<waypoints[i+1].x <<" "<<waypoints[i+1].y<<" "<< waypoints[i+1].th << std::endl; // for debug
+	subtree = rrtTree(waypoints[i], waypoints[i + 1], map, map_origin_x, map_origin_y, res, margin);
+	
+        int k = subtree.generateRRT(world_x_max, world_x_min, world_y_max, world_y_min, K, MaxStep);  // check RRT
+	if(!k)	// RRT is not OK => delete previous RRT, and make it one more time
+	{
+	    if (i == 0)	// exception control
+		i -= 1;
+	    else
+		{
+		path_temp.pop_back();	// delete previous RRT
+		i -= 2;
+		}
+	    continue;
+	}
+	if(k)	// RRT is OK
+	{
+	    std::cout << (i+1) << "th generateRRT is fine" << std::endl; // for debug
+            std::vector<traj> route_reverse = subtree.backtracking_traj();
 
-        std::vector<traj> route_reverse = subtree.backtracking_traj();
-//std::cout << "backtracking is fine" << std::endl;
-        std::reverse(route_reverse.begin(), route_reverse.end());
-//std::cout << "reversing is fine" << std::endl;
-        for (int j = 0; j < route_reverse.size(); j++)	// because of turning point
-            path_RRT.push_back(route_reverse[j]);
-//std::cout << "push back is fine" << std::endl;
-	path_end_idx.push_back(path_RRT.size() - 1);
-//std::cout << "push back idx is fine" << std::endl;
-//	subTree.~rrtTree();
+            std::cout <<"subtre size: "<<route_reverse.size()<<std::endl;    // for debug
+            std::reverse(route_reverse.begin(), route_reverse.end());
+
+	    path_temp.push_back(route_reverse);	// save subTree's path
+	    // set heading direction
+	    waypoints[i+1].th = atan2(path_temp[i][path_temp[i].size()-1].y - path_temp[i][path_temp[i].size()-2].y, path_temp[i][path_temp[i].size()-1].x - path_temp[i][path_temp[i].size()-2].x);
+	    std::cout << waypoints[i+1].th << std::endl;    // for debug
+            std::cout<<std::endl;	// for debug
+    	}
+    }
+    for (int i = 0 ; i < waypoints.size() - 1; i++)
+    {
+	std::cout << "start printing" << std::endl;
+        for (int j = 0; j < path_temp[i].size(); j++)
+	    path_RRT.push_back(path_temp[i][j]);
+        std::cout << path_RRT.size() << std::endl; // for debug
     }
 }
 
@@ -316,12 +343,18 @@ void set_waypoints()
     point waypoint_candid[5];
     waypoint_candid[0].x = -3.5;
     waypoint_candid[0].y = 12.0;
+
     waypoint_candid[1].x = 2.0;
     waypoint_candid[1].y = 12.0;
+    
     waypoint_candid[2].x = 3.5;
     waypoint_candid[2].y = -10.5;
+//    waypoint_candid[2].th = - 3.14/2;
+
     waypoint_candid[3].x = -2.0;
     waypoint_candid[3].y = -12.0;
+//        waypoint_candid[3].th = 3.14;
+
     waypoint_candid[4].x = -3.5;
     waypoint_candid[4].y = 10.0;
 
@@ -332,7 +365,16 @@ void set_waypoints()
         waypoints.push_back(waypoint_candid[order[i]]);
     }
 }
+void set_angle()
+{
+    for (int i =0; i<waypoints.size()-1; i++)
+    {
+        waypoints[i+1].th = atan2(waypoints[i+1].y - waypoints[i].y, waypoints[i+1].x - waypoints[i].x);
+std::cout << waypoints[i+1].th << std::endl;
+    }
+}
 
+//from: 3.5 -10.5 -1.57   to: -2 -12 3.14
 
 void callback_state(gazebo_msgs::ModelStatesConstPtr msgs){
     model_states = msgs;

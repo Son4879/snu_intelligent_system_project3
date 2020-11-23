@@ -202,18 +202,26 @@ void rrtTree::addVertex(point x_new, point x_rand, int idx_near, double alpha, d
 int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min, int K, double MaxStep)
 {
     //TODO
+    std::cout <<"count is : "<<count<<std::endl;
     int succeed = 0;
-    for (int i = 0; i < K; i++)
+    int i =0;
+    std::cout <<"gen started "<<i<<std::endl;
+    for (i = 0; i < K; i++)
     {
         //goal
         if (pow(x_goal.x - ptrTable[count - 1]->location.x, 2) + pow(x_goal.y - ptrTable[count - 1]->location.y, 2) < 0.04)
+        {
+            std::cout <<"path found"<<std::endl;
+            succeed = 1;
             break;
+        }
         int x_near_index = -1;
         point x_rand;
         x_rand = randomState(x_max, x_min, y_max, y_min); //random point generate
         x_near_index = nearestNeighbor(x_rand, MaxStep);  // nearest neighbor search
         if (x_near_index == -1)
         {
+//            i--;
             continue;
         }
 //cout << "near found" << endl;
@@ -222,6 +230,7 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
         valid = randompath(out, ptrTable[x_near_index]->location, x_rand, MaxStep); //random path generation
         if (valid == 0)
         {
+            i--;
             continue;
         }
 //cout << "find RP" << endl;
@@ -232,9 +241,14 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
 //cout << "is it here? " << count << endl;
         addVertex(x_new, x_rand, x_near_index, out[3], out[4]);
 //cout << (i+1) << "th add success" << endl;
-        succeed = 1;
     }
-        cout << "loop is finished" << endl; //- for debug
+    std::cout <<"loop is over "<< i<<std::endl;
+    std::cout <<"goal: "<<x_goal.x<<" "<<x_goal.y<<" "<<x_goal.th<<std::endl;
+    int ccc =nearestNeighbor(x_goal, 999);
+std::cout <<"nearestNeighbor: "<<ccc<<std::endl;
+    
+    std::cout << ptrTable[ccc]->location.x <<" "<<ptrTable[ccc]->location.y<<std::endl;
+//        cout << "loop is finished might be failed" << endl; //- for debug
     return succeed;
 }
 
@@ -242,12 +256,12 @@ point rrtTree::randomState(double x_max, double x_min, double y_max, double y_mi
 {
     //TODO
     point random;
-    if (count % 1000 == 0) // goal biased
-        return x_goal;
+//    if (count % 20 == 0) // goal biased
+//        return x_goal;
 
     random.x = (double)rand() / (RAND_MAX) * (x_max - x_min) + x_min;
     random.y = (double)rand() / (RAND_MAX) * (y_max - y_min) + y_min;
-    random.th = atan2(random.y, random.x);
+//    random.th = atan2(random.y, random.x);
     return random;
 }
 
@@ -260,7 +274,7 @@ int rrtTree::nearestNeighbor(point x_rand, double MaxStep)
     double beta = MaxStep / maxR;
     for (int i = 0; i < count; i++)
     {
-        double temp = pow(ptrTable[i]->location.x - x_rand.x, 2) + pow(ptrTable[i]->location.y - x_rand.y, 2); //distance
+        double temp = sqrt(pow(ptrTable[i]->location.x - x_rand.x, 2) + pow(ptrTable[i]->location.y - x_rand.y, 2)); //distance
         if (temp < nd)                                                                                         //to reduce calculation
         {
 /*            //checking 2 direction (left & right)
@@ -270,7 +284,6 @@ int rrtTree::nearestNeighbor(point x_rand, double MaxStep)
             double y_right_center = ptrTable[i]->location.y - maxR * cos(ptrTable[i]->location.th);
             double temp_left = pow(x_left_center - x_rand.x, 2) + pow(y_left_center - x_rand.y, 2);
             double temp_right = pow(x_right_center - x_rand.x, 2) + pow(y_right_center - x_rand.y, 2);
-
             if (temp_left > pow(maxR, 2) && temp_right > pow(maxR, 2)) //if it's accessible
             {
                 nd = temp;
@@ -305,7 +318,6 @@ int rrtTree::nearestNeighbor(point x_rand, double MaxStep)
     //cout<<"nN "<<nN<<" "; - for debug
     return nN;
 }
-
 int rrtTree::nearestNeighbor(point x_rand)
 {
     int nN = 0;                                                                                          //nearest Neighbor

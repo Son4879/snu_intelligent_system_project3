@@ -26,6 +26,7 @@ private:
         int idx_parent;
 	    double alpha;
 	    double d;
+        int backstep_count;
     }*root;
 
     int count;

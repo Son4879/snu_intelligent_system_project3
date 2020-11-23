@@ -29,6 +29,8 @@ rrtTree::rrtTree(point x_init, point x_goal)
     root->rand = x_init;
     root->alpha = 0;
     root->d = 0;
+    root->backstep_count =0;
+
 }
 
 rrtTree::~rrtTree()
@@ -196,6 +198,7 @@ void rrtTree::addVertex(point x_new, point x_rand, int idx_near, double alpha, d
     ptrTable[count]->idx_parent = idx_near;
     ptrTable[count]->alpha = alpha;
     ptrTable[count]->d = d;
+    ptrTable[count]->backstep_count = 0;
     count++;
 }
 
@@ -225,12 +228,22 @@ int rrtTree::generateRRT(double x_max, double x_min, double y_max, double y_min,
             continue;
         }
 //cout << "near found" << endl;
+//if this point can't make randompath more than 20, do not use
+while(ptrTable[x_near_index]->backstep_count > 20)
+{
+    if(x_near_index == 0)
+        break;
+    x_near_index = ptrTable[x_near_index]->idx_parent;
+}
+
         double out[5];
         int valid = 0;
         valid = randompath(out, ptrTable[x_near_index]->location, x_rand, MaxStep); //random path generation
         if (valid == 0)
         {
-            i--;
+//            i--;
+//count backstep_count when it cannot make randompath
+        ptrTable[x_near_index]->backstep_count ++;
             continue;
         }
 //cout << "find RP" << endl;
